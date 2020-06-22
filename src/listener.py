@@ -89,8 +89,11 @@ class Listener:
 
 if __name__ == "__main__":
     def log(rec):
-        print("Got audio {} seconds long.".format(len(rec) / 2 / 44100))
+        print("Got audio {:0.2f} seconds long.".format(len(rec) / 2 / 44100))
 
     a = Listener(log)
 
-    a.listen()
+    try:
+        a.listen()
+    except KeyboardInterrupt:
+        exit()
