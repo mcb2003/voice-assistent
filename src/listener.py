@@ -1,6 +1,14 @@
-import pyaudio, math, struct, wave, time, os
-from typing import Type
+""" Provides utilities for constantly monitoring a mic for sound. """
+
+import math
+import struct
+import time
+
+from sys import exit
 from types import FunctionType
+from typing import Type
+
+import pyaudio
 
 class Listener:
     """ Listens for sound, records until silence, then returns the recorded audio. """
@@ -9,47 +17,46 @@ class Listener:
     SHORT_NORMALIZE = (1.0/32768.0)
 
     @staticmethod
-    def rms(frame, sampWidth: int) -> float:
+    def rms(frame, sample_width: int) -> float:
         """ Calculate the RMS for a given audio frame and sample width. """
-        count = len(frame) / sampWidth
-        format = "%dh" % (count)
-        shorts = struct.unpack(format, frame)
+        count = len(frame) / sample_width
+        audio_format = "%dh" % (count)
+        shorts = struct.unpack(audio_format, frame)
 
         sum_squares = 0.0
         for sample in shorts:
-            n = sample * Listener.SHORT_NORMALIZE
-            sum_squares += n * n
+            normal = sample * Listener.SHORT_NORMALIZE
+            sum_squares += normal * normal
 
         rms = math.pow(sum_squares / count, 0.5)
         return rms * 1000
 
     def __init__(self,
-            onAudio: FunctionType,
-        format: Type = pyaudio.paInt16,
-        channels: int = 1,
-        rate: int = 44100,
-        sampWidth: int = 2, # Bytes (16 bits)
-        chunk: int = 1024,
-        threshold: float = 10,
-        timeout: float = 1.0
-        ):
+                 on_audio: FunctionType,
+                 audio_format: Type = pyaudio.paInt16,
+                 channels: int = 1,
+                 rate: int = 44100,
+                 sample_width: int = 2, # Bytes (16 bits)
+                 chunk: int = 1024,
+                 threshold: float = 10,
+                 timeout: float = 1.0):
         """ Create a new Listener object. """
-        self.onAudio = onAudio
-        self.p = pyaudio.PyAudio()
-        self.stream = self.p.open(
-                                      format=format,
-                                      channels=channels,
-                                      rate=rate,
-                                      input=True,
-                                      output=True,
-                                  frames_per_buffer=chunk)
+        self.on_audio = on_audio
+        self.connection = pyaudio.PyAudio()
+        self.stream = self.connection.open(
+            audio_format=audio_format,
+            channels=channels,
+            rate=rate,
+            input=True,
+            output=True,
+            frames_per_buffer=chunk)
 
         # Store these values in the class so we can retrieve them later:
-        self.format = format
+        self.audio_format = audio_format
         self.channels = channels
         self.rate = rate
         self.chunk = chunk
-        self.sampWidth = sampWidth
+        self.sample_width = sample_width
         self.threshold = threshold
         self.timeout = timeout
 
@@ -67,7 +74,7 @@ class Listener:
             data = self.stream.read(self.chunk)
             # If the audio is loud enough, push our end time back
             # So we keep recording.
-            if self.rms(data, self.sampWidth) >= self.threshold:
+            if self.rms(data, self.sample_width) >= self.threshold:
                 end = time.time() + self.timeout
 
             # Update the current time
@@ -76,24 +83,26 @@ class Listener:
             rec.append(data)
 
         # At this point, recording has finished,
-        # So call the onAudio event.
+        # So call the on_audio event.
         # The list of chunks is converted to bytes.
-        self.onAudio(b''.join(rec))
+        self.on_audio(b''.join(rec))
 
     def listen(self):
+        """ Wait for sound, then start recording. """
         while True:
-            input = self.stream.read(self.chunk)
-            rms_val = self.rms(input, self.sampWidth)
+            latest = self.stream.read(self.chunk)
+            rms_val = self.rms(latest, self.sample_width)
             if rms_val > self.threshold:
                 self.record()
 
 if __name__ == "__main__":
     def log(rec):
+        """ Log the length of the captured audio. """
         print("Got audio {:0.2f} seconds long.".format(len(rec) / 2 / 44100))
 
-    a = Listener(log)
+    listener = Listener(log)
 
     try:
-        a.listen()
+        listener.listen()
     except KeyboardInterrupt:
         exit()
