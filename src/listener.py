@@ -16,7 +16,7 @@ class Listener:
     SHORT_NORMALIZE = (1.0/32768.0)
 
     @staticmethod
-    def rms(frame, sample_width: int) -> float:
+    def rms(frame: bytes, sample_width: int) -> float:
         """ Calculate the RMS for a given audio frame and sample width. """
         count = len(frame) / sample_width
         audio_format = "%dh" % (count)
@@ -30,7 +30,8 @@ class Listener:
         rms = math.pow(sum_squares / count, 0.5)
         return rms * 1000
 
-    def __init__(self, on_audio: FunctionType, **kwargs):
+    def __init__(self, on_audio: FunctionType,
+            pa_instance: pyaudio.PyAudio = None, **kwargs):
         """ Create a new Listener object. """
 
         # Set defaults for arguments
@@ -48,7 +49,12 @@ class Listener:
         # Save the named arguments
         self.stream_args = kwargs
 
-        self.connection = pyaudio.PyAudio()
+        # If we were constructed with a connection, use that,
+        # Otherwise create one.
+        if pa_instance is not None:
+            self.connection = pa_instance
+        else:
+            self.connection = pyaudio.PyAudio()
         self.stream = self.connection.open(input=True, **kwargs)
 
     def __del__(self):
@@ -67,7 +73,7 @@ class Listener:
         # Loop until there is silence:
         while current <= end:
             # Get a chunk of audio from the stream
-            data = self.stream.read(self.chunk)
+            data= self.stream.read(self.chunk)
             # If the audio is loud enough, push our end time back
             # So we keep recording.
             if self.rms(data, self.sample_width) >= self.threshold:
@@ -80,13 +86,13 @@ class Listener:
 
         # At this point, recording has finished,
         # So call the on_audio event.
-        # The list of chunks is converted to bytes.
+        # The list of bytes objects is concatinated
         self.on_audio(b''.join(rec))
 
     def listen(self):
         """ Wait for sound, then start recording. """
         while True:
-            latest = self.stream.read(self.chunk)
+            latest= self.stream.read(self.chunk)
             rms_val = self.rms(latest, self.sample_width)
             if rms_val > self.threshold:
                 self.record()
