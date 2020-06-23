@@ -51,6 +51,11 @@ class Listener:
         self.connection = pyaudio.PyAudio()
         self.stream = self.connection.open(input=True, **kwargs)
 
+    def __del__(self):
+        self.stream.stop_stream()
+        self.stream.close()
+        self.connection.terminate()
+
     def record(self):
         """ Start recording, and don't stop until there is silence. """
         rec = []
