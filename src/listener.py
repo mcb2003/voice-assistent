@@ -1,4 +1,18 @@
 """ Provides utilities for constantly monitoring a mic for sound. """
+#    Copyright (C) 2020  Michael Connor Buchan
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import math
 import struct
@@ -8,6 +22,15 @@ from sys import exit
 from types import FunctionType
 
 import pyaudio
+
+__author__ = "Michael Connor Buchan"
+__copyright__ = "Copyright (C) 2020" + __author__
+__credits__ = __author__
+__license__ = "GPL-3.0-OR-LATER"
+__version__ = "0.0.1"
+__maintainer__ = __author__
+__email__ = "mikeybuchan@hotmail.co.uk"
+__status__ = "Development"
 
 class Listener:
     """ Listens for sound, records until silence, then returns the recorded audio. """
@@ -31,7 +54,7 @@ class Listener:
         return rms * 1000
 
     def __init__(self, on_audio: FunctionType,
-            pa_instance: pyaudio.PyAudio = None, **kwargs):
+                 pa_instance: pyaudio.PyAudio = None, **kwargs):
         """ Create a new Listener object. """
 
         # Set defaults for arguments
@@ -73,7 +96,7 @@ class Listener:
         # Loop until there is silence:
         while current <= end:
             # Get a chunk of audio from the stream
-            data= self.stream.read(self.chunk)
+            data = self.stream.read(self.chunk)
             # If the audio is loud enough, push our end time back
             # So we keep recording.
             if self.rms(data, self.sample_width) >= self.threshold:
@@ -92,7 +115,7 @@ class Listener:
     def listen(self):
         """ Wait for sound, then start recording. """
         while True:
-            latest= self.stream.read(self.chunk)
+            latest = self.stream.read(self.chunk)
             rms_val = self.rms(latest, self.sample_width)
             if rms_val > self.threshold:
                 self.record()
