@@ -6,7 +6,6 @@ import time
 
 from sys import exit
 from types import FunctionType
-from typing import Type
 
 import pyaudio
 
@@ -31,34 +30,26 @@ class Listener:
         rms = math.pow(sum_squares / count, 0.5)
         return rms * 1000
 
-    def __init__(self,
-                 on_audio: FunctionType,
-                 audio_format: Type = pyaudio.paInt16,
-                 channels: int = 1,
-                 rate: int = 44100,
-                 sample_width: int = 2, # Bytes (16 bits)
-                 chunk: int = 1024,
-                 threshold: float = 10,
-                 timeout: float = 1.0):
+    def __init__(self, on_audio: FunctionType, **kwargs):
         """ Create a new Listener object. """
-        self.on_audio = on_audio
-        self.connection = pyaudio.PyAudio()
-        self.stream = self.connection.open(
-            audio_format=audio_format,
-            channels=channels,
-            rate=rate,
-            input=True,
-            output=True,
-            frames_per_buffer=chunk)
 
-        # Store these values in the class so we can retrieve them later:
-        self.audio_format = audio_format
-        self.channels = channels
-        self.rate = rate
-        self.chunk = chunk
-        self.sample_width = sample_width
-        self.threshold = threshold
-        self.timeout = timeout
+        # Set defaults for arguments
+        kwargs.setdefault('format', pyaudio.paInt16)
+        kwargs.setdefault('channels', 1)
+        kwargs.setdefault('rate', 44100)
+        self.chunk = kwargs.pop('chunk', 1024)
+        self.threshold = kwargs.pop('threshold', 10.0)
+        self.timeout = kwargs.pop('timeout', 1.0)
+        self.sample_width = pyaudio.get_sample_size(kwargs['format'])
+
+        # Register the function called when audio is captured
+        self.on_audio = on_audio
+
+        # Save the named arguments
+        self.stream_args = kwargs
+
+        self.connection = pyaudio.PyAudio()
+        self.stream = self.connection.open(input=True, **kwargs)
 
     def record(self):
         """ Start recording, and don't stop until there is silence. """
